@@ -6,6 +6,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import NavBar from "./components/ui/NavBar";
 import CrearFlujo from "./app/CrearFlujo";
 import EditarFlujo from "./app/EditarFlujo";
+import Playground from "./components/Playground";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(
@@ -40,6 +41,7 @@ function App() {
           <Route path="/dashboard" element={<Home />} />
           <Route path="/crear" element={<CrearFlujo />} />
           <Route path="/editar/:id" element={<EditarFlujo />} />
+          <Route path="/preview/:id" element={<Playground />} />
         </Route>
       </Routes>
     </>

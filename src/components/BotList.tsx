@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Trash2, Edit, MoreVertical, Box, Calendar, Type, Hash, Mail } from "lucide-react";
+import { Trash2, Edit, Box, Calendar, Type, Hash, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 
 type Variable = {
@@ -123,6 +123,7 @@ export default function BotList() {
               >
                 <Trash2 className="w-5 h-5" />
               </button>
+              
             </div>
           </div>
         </div>
