@@ -42,7 +42,7 @@ export interface BackendFlowMethod {
     };
   };
 
- responses: Record<string, BackendFlowResponse>;
+  responses: Record<string, BackendFlowResponse>;
 }
 
 export interface BackendFlowResponse {
