@@ -27,13 +27,13 @@ import {
 // TYPES & INTERFACES
 // ============================================================================
 
-type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
-type AuthType = "none" | "apiKey" | "bearer";
-type ParamType = "string" | "number" | "boolean" | "integer";
+export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
+export type AuthType = "none" | "apiKey" | "bearer";
+export type ParamType = "string" | "number" | "boolean" | "integer";
 
 type ParamLocation = "query" | "path";
 
-interface FlowParameter {
+export interface FlowParameter {
   id: string;
   name: string;
   type: ParamType;
@@ -43,7 +43,7 @@ interface FlowParameter {
   in: ParamLocation; // 'path' for URL path params like {id}, 'query' for ?param=value
 }
 
-interface FlowBodyProperty {
+export interface FlowBodyProperty {
   id: string;
   name: string;
   type: ParamType;
@@ -68,7 +68,7 @@ interface FlowResponse {
   properties: FlowResponseProperty[];
 }
 
-interface FlowAuth {
+export interface FlowAuth {
   type: AuthType;
   apiKeyName?: string;
   apiKeyValue?: string;
@@ -76,7 +76,7 @@ interface FlowAuth {
 }
 
 // Nuevo: Cada endpoint tiene su propio método, ruta, parámetros y body
-interface FlowEndpoint {
+export interface FlowEndpoint {
   id: string;
   name: string;
   description?: string;
@@ -87,7 +87,7 @@ interface FlowEndpoint {
   responses: FlowResponse[];
 }
 
-interface Flow {
+export interface Flow {
   id: string;
   name: string;
   description: string;
