@@ -1,6 +1,8 @@
-// ---------------------------
+// ===========================
 // 1) Tipos de getFlows (OPENAPI-LIKE)
-// ---------------------------
+// ===========================
+
+import type { OpenAPISchema } from "../FlowsManager";
 
 export interface FlowsResponse {
   code: {
@@ -15,6 +17,10 @@ export interface FlowsResponse {
   };
 }
 
+// ===========================
+// FLOW
+// ===========================
+
 export interface BackendFlow {
   id: string;
   name: string;
@@ -26,12 +32,20 @@ export interface BackendFlow {
   components?: BackendFlowComponents;
 }
 
+// ===========================
+// METHODS
+// ===========================
+
 export interface BackendFlowMethod {
   summary: string;
   description: string;
   operationId: string;
 
-  security?: Array<Record<string, any>>;
+  // OpenAPI security
+  security?: Array<Record<string, string[]>>;
+
+  // Path / Query / Header params
+  parameters?: BackendFlowParameter[];
 
   requestBody?: {
     required: boolean;
@@ -45,6 +59,25 @@ export interface BackendFlowMethod {
   responses: Record<string, BackendFlowResponse>;
 }
 
+// ===========================
+// PARAMETERS
+// ===========================
+
+export interface BackendFlowParameter {
+  name: string;
+  in: "path" | "query" | "header" | "cookie";
+  required?: boolean;
+  description?: string;
+  schema: {
+    type: string;
+    example?: string | number | boolean;
+  };
+}
+
+// ===========================
+// RESPONSES
+// ===========================
+
 export interface BackendFlowResponse {
   description: string;
   content?: {
@@ -54,23 +87,74 @@ export interface BackendFlowResponse {
   };
 }
 
+// ===========================
+// SCHEMA
+// ===========================
+
 export interface BackendSchema {
   type: string;
   properties?: Record<string, BackendSchemaProperty>;
   required?: string[];
 }
 
+// ===========================
+// SCHEMA PROPERTY
+// ===========================
+
 export interface BackendSchemaProperty {
   type: string;
+  description?: string;
+  example?: string | number | boolean;
 }
+
+// ===========================
+// COMPONENTS
+// ===========================
 
 export interface BackendFlowComponents {
-  securitySchemes?: Record<string, BackendSecurityScheme>;
+  securitySchemes?: {
+    ApiKeyAuth?: BackendApiKeySecurityScheme;
+    BearerAuth?: BackendBearerSecurityScheme;
+  };
 }
 
-export interface BackendSecurityScheme {
-  type: string;
-  in?: string;
-  name?: string;
+// ===========================
+// SECURITY SCHEMES
+// ===========================
+
+export interface BackendApiKeySecurityScheme {
+  type: "apiKey";
+  in: "header" | "query";
+  name: string;
+  value?: string;
+}
+
+export interface BackendBearerSecurityScheme {
+  type: "http";
+  scheme: "bearer";
+  value?: string;
+}
+
+// ===========================
+// UPDATE FLOW PAYLOAD
+// ===========================
+
+export interface UpdateFlowRequest {
+  // --- dominio ---
+  flowName: string;
+  storedFlowRowKey: string;
+
+  // --- OpenAPI envuelto ---
+  openApiJson: OpenAPISchema & {
+    // extras de tu dominio (NO OpenAPI puro)
+    active?: boolean;
+  };
+}
+
+
+export interface PatchFlowRequest {
+  // --- dominio ---
+  active: boolean;
+  storedFlowRowKey: string;
 }
 

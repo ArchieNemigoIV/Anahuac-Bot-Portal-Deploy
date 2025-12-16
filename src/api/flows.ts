@@ -1,5 +1,5 @@
 import type { OpenAPISchema } from "../components/FlowsManager";
-import type { FlowsResponse } from "../components/interfaces/flow";
+import type { FlowsResponse, PatchFlowRequest, UpdateFlowRequest } from "../components/interfaces/flow";
 import { URL_API_AGENT } from "../utils/environments";
 
 export interface ApiCodeResponse {
@@ -64,6 +64,52 @@ export const createFlowData = async (
 
   const data: ApiCodeResponse = await response.json();
 
-  // 👉 solo te importa esto
+  return data.code;
+};
+
+export const updateFlowData = async (
+  payload: UpdateFlowRequest
+): Promise<ApiCodeResponse["code"]> => {
+  if (!payload.storedFlowRowKey) {
+    throw new Error("storedFlowRowKey is required");
+  }
+
+  const response = await fetch(`${URL_API_AGENT}/update-flow`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Error ${response.status}: ${response.statusText}`);
+  }
+
+  const data: ApiCodeResponse = await response.json();
+  return data.code;
+};
+
+
+export const patchFlowData = async (
+  payload: PatchFlowRequest
+): Promise<ApiCodeResponse["code"]> => {
+  if (!payload.storedFlowRowKey) {
+    throw new Error("storedFlowRowKey is required");
+  }
+
+  const response = await fetch(`${URL_API_AGENT}/patch-flow`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Error ${response.status}: ${response.statusText}`);
+  }
+
+  const data: ApiCodeResponse = await response.json();
   return data.code;
 };

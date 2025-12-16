@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Plus,
   Trash2,
@@ -23,7 +23,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { transformGetFlowsResponseToFullFlow } from "../utils/helpers";
-import { createFlowData, deleteFlowData, getFlows } from "../api/flows";
+import { createFlowData, deleteFlowData, getFlows, patchFlowData, updateFlowData } from "../api/flows";
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -33,7 +33,7 @@ export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 export type AuthType = "none" | "apiKey" | "bearer";
 export type ParamType = "string" | "number" | "boolean" | "integer";
 
-type ParamLocation = "query" | "path";
+export type ParamLocation = "query" | "path";
 
 export interface FlowParameter {
   id: string;
@@ -75,6 +75,7 @@ export interface FlowAuth {
   apiKeyName?: string;
   apiKeyValue?: string;
   bearerToken?: string;
+  value?: string;
 }
 
 // Nuevo: Cada endpoint tiene su propio método, ruta, parámetros y body
@@ -129,7 +130,6 @@ export interface OpenAPISchema {
 // ============================================================================
 
 function useFlowsStorage() {
-  const STORAGE_KEY = "conversational_flows";
   const [flows, setFlows] = useState<Flow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -152,65 +152,105 @@ function useFlowsStorage() {
     loadFlows();
   }, []);
 
+
   const saveFlow = useCallback(
     async (
-      flow: Omit<Flow, "id" | "createdAt" | "updatedAt"> & { id?: string }
+      flow: Omit<Flow, "createdAt" | "updatedAt"> & { id?: string }
     ) => {
       const now = new Date().toISOString();
+      const isEdit = Boolean(flow.id);
 
-      // 1️⃣ Construir el Flow final
-      const finalFlow: Flow = flow.id
+      const finalFlow: Flow = isEdit
         ? {
-          ...flow,
+          ...(flow as Flow),
           updatedAt: now,
-        } as Flow
+        }
         : {
-          ...flow,
+          ...(flow as Flow),
           id: crypto.randomUUID(),
           createdAt: now,
           updatedAt: now,
         };
 
-      // 2️⃣ Actualizar estado (SIN async)
       setFlows((prev) => {
-        if (flow.id) {
+        if (isEdit) {
           return prev.map((f) =>
-            f.id === flow.id ? { ...f, ...finalFlow } : f
+            f.id === finalFlow.id ? { ...f, ...finalFlow } : f
           );
         }
-
         return [...prev, finalFlow];
       });
+
       try {
-        setIsLoading(true)
-        console.log(generateOpenAPISchema(finalFlow))
-        await createFlowData(generateOpenAPISchema(finalFlow));
-        loadFlows();
+        setIsLoading(true);
+
+        const openApiSchema = generateOpenAPISchema(finalFlow);
+        if (isEdit) {
+          await updateFlowData({
+            flowName: finalFlow.name,
+            storedFlowRowKey: finalFlow.id,
+            openApiJson: {
+              ...openApiSchema,
+              active: finalFlow.active,
+            },
+          });
+        } else {
+          await createFlowData(openApiSchema);
+        }
+
+        await loadFlows();
       } catch (error) {
-        console.error("Error creando flow en backend:", error);
-        setIsLoading(false)
-        setFlows((prev) =>
-          prev.filter((f) => f.id !== finalFlow.id)
-        );
+        console.error("Error guardando flow en backend:", error);
+
+        // 5️⃣ Rollback UI
+        setFlows((prev) => {
+          if (isEdit) {
+            return prev.map((f) =>
+              f.id === finalFlow.id ? (flow as Flow) : f
+            );
+          }
+          return prev.filter((f) => f.id !== finalFlow.id);
+        });
 
         throw error;
+      } finally {
+        setIsLoading(false);
       }
     },
-    []
+    [loadFlows]
   );
 
 
+  const changeActive = useCallback(
+  async (id: string, flow: Flow) => {
+    const nextActive = !flow.active;
 
-
-  const changeActive = useCallback((id: string) => {
+    // 🔹 Optimistic update
     setFlows((prev) =>
-      prev.map((flow) =>
-        flow.id === id
-          ? { ...flow, active: !flow.active }
-          : flow
+      prev.map((f) =>
+        f.id === id ? { ...f, active: nextActive } : f
       )
     );
-  }, []);
+
+    try {
+      await patchFlowData({
+        storedFlowRowKey: flow.id,
+        active: nextActive,
+      });
+    } catch (error) {
+      console.error("Error updating flow status", error);
+
+      // 🔁 Rollback si falla
+      setFlows((prev) =>
+        prev.map((f) =>
+          f.id === id ? { ...f, active: flow.active } : f
+        )
+      );
+    }
+  },
+  []
+);
+
 
   const deleteFlow = useCallback(
     async (flow: Flow) => {
@@ -262,6 +302,7 @@ function generateOpenAPISchema(flow: Partial<Flow>): OpenAPISchema {
         type: "apiKey",
         in: "header",
         name: flow.auth.apiKeyName || "X-API-Key",
+        value: flow.auth.apiKeyValue
       },
     };
   } else if (flow.auth?.type === "bearer") {
@@ -269,6 +310,7 @@ function generateOpenAPISchema(flow: Partial<Flow>): OpenAPISchema {
       BearerAuth: {
         type: "http",
         scheme: "bearer",
+        value: flow.auth.bearerToken
       },
     };
   }
@@ -315,8 +357,11 @@ function generateOpenAPISchema(flow: Partial<Flow>): OpenAPISchema {
       in: string;
       required: boolean;
       description: string;
-      schema: { type: string };
-      example?: string | number | boolean;
+      schema: {
+        type: string;
+        example?: string | number | boolean;
+      };
+
     }> = [];
 
     // Helper to generate example value based on type
@@ -341,8 +386,10 @@ function generateOpenAPISchema(flow: Partial<Flow>): OpenAPISchema {
         in: 'path',
         required: true, // Path params are always required in OpenAPI
         description: definedParam?.description || `Path parameter: ${paramName}`,
-        schema: { type: paramType },
-        ...(exampleValue !== undefined && { example: exampleValue }),
+        schema: {
+          type: paramType,
+          example: exampleValue
+        }
       });
     });
 
@@ -352,13 +399,17 @@ function generateOpenAPISchema(flow: Partial<Flow>): OpenAPISchema {
         .filter(param => param.in === 'query' || !param.in) // Default to query if not specified
         .forEach(param => {
           const exampleValue = getExampleValue(param.type, param.example);
+          console.log(exampleValue)
           allParameters.push({
             name: param.name,
             in: 'query',
             required: param.required,
             description: param.description || '',
-            schema: { type: param.type === 'integer' ? 'integer' : param.type },
-            ...(exampleValue !== undefined && { example: exampleValue }),
+            schema: {
+              type: param.type === 'integer' ? 'integer' : param.type,
+              example: param.example ?? ''
+            },
+
           });
         });
     }
@@ -1350,7 +1401,6 @@ function Step3Responses({
                                             <X className="w-4 h-4" />
                                           </button>
                                         </div>
-
                                         {/* Row 1: Name and Type */}
                                         <div className="flex gap-2 mb-2">
                                           <div className="flex-1">
@@ -1695,10 +1745,14 @@ function Step1General({
   data,
   onChange,
   errors,
+  flows,
+  setErrors
 }: {
   data: Partial<Flow>;
   onChange: (updates: Partial<Flow>) => void;
   errors: Record<string, string>;
+  flows: Flow[];
+  setErrors: (errors: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void;
 }) {
   const handleAuthTypeChange = (type: AuthType) => {
     onChange({
@@ -1710,6 +1764,40 @@ function Step1General({
       },
     });
   };
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleNameChange = (value: string) => {
+    onChange({ name: value });
+
+    if (data.id) return;
+
+    // Limpiar debounce previo
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    debounceRef.current = setTimeout(() => {
+      const normalizedValue = value.trim().toLowerCase();
+
+      const exists = flows.some(
+        (flow) => flow.name.trim().toLowerCase() === normalizedValue
+      );
+
+      if (exists) {
+        setErrors((prev) => ({
+          ...prev,
+          name: "Ya existe un flujo con este nombre",
+        }));
+      } else {
+        setErrors((prev) => {
+          const { name, ...rest } = prev;
+          return rest;
+        });
+      }
+    }, 500); // ⏱ debounce
+  };
+
 
   return (
     <div className="space-y-6">
@@ -1737,11 +1825,15 @@ function Step1General({
         <input
           type="text"
           value={data.name || ""}
-          onChange={(e) => onChange({ name: e.target.value })}
+          onChange={(e) => handleNameChange(e.target.value)}
+          disabled={!!data.id}
           placeholder="Ej: Consulta de Inventario"
-          className={`w-full px-4 py-3 rounded-xl border ${errors.name ? "border-red-500" : "border-gray-200 dark:border-gray-700"
+          className={`w-full px-4 py-3 rounded-xl disabled:bg-gray-200 border ${errors.name
+            ? "border-red-500"
+            : "border-gray-200 dark:border-gray-700"
             } bg-white dark:bg-gray-800 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all`}
         />
+
         {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
       </div>
 
@@ -2895,11 +2987,31 @@ export default function FlowsManager() {
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (step === 0) {
-      if (!formData.name?.trim()) newErrors.name = "El nombre es obligatorio";
-      if (!formData.baseUrl?.trim()) newErrors.baseUrl = "La URL base es obligatoria";
-      else if (!/^https?:\/\/.+/.test(formData.baseUrl)) newErrors.baseUrl = "URL inválida";
+if (step === 0) {
+  if (!formData.name?.trim()) {
+    newErrors.name = "El nombre es obligatorio";
+  }
+
+  if (!formData.baseUrl?.trim()) {
+    newErrors.baseUrl = "La URL base es obligatoria";
+  } else if (!/^https?:\/\/.+/.test(formData.baseUrl)) {
+    newErrors.baseUrl = "URL inválida";
+  }
+
+  // ✅ Validar nombre duplicado SOLO en creación
+  if (!formData.id && formData.name?.trim()) {
+    const normalizedValue = formData.name.trim().toLowerCase();
+
+    const exists = flows.some(
+      (flow) => flow.name.trim().toLowerCase() === normalizedValue
+    );
+
+    if (exists) {
+      newErrors.name = "Ya existe un flujo con este nombre";
     }
+  }
+}
+
 
     if (step === 1) {
       if (!formData.endpoints || formData.endpoints.length === 0) {
@@ -2934,7 +3046,7 @@ export default function FlowsManager() {
                 newErrors.endpoints = `El campo "${prop.name || 'sin nombre'}" en "${ep.path}" necesita una descripción`;
                 break;
               }
-              if (!prop.example?.trim()) {
+              if (!String(prop.example)?.trim()) {
                 newErrors.endpoints = `El campo "${prop.name || 'sin nombre'}" en "${ep.path}" necesita un ejemplo`;
                 break;
               }
@@ -3027,17 +3139,14 @@ export default function FlowsManager() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64 bg-transparent">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen">
-      {/* Toast Notification */}
+    <div className="min-h-screen relative">
+      {isLoading && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-t-2 border-orange-500"></div>
+        </div>
+      )}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* Delete Confirmation Modal */}
@@ -3081,7 +3190,7 @@ export default function FlowsManager() {
               {flows.map((flow) => (
                 <FlowCard
                   key={flow.id}
-                  changeActive={changeActive}
+                  changeActive={()=> changeActive(flow.id, flow)}
                   flow={flow}
                   onEdit={() => startEditFlow(flow.id)}
                   onDelete={() => handleDelete(flow)}
@@ -3114,7 +3223,7 @@ export default function FlowsManager() {
           {/* Step Content */}
           <div className="bg-white dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 rounded-2xl p-6 shadow-sm mb-6">
             {currentStep === 0 && (
-              <Step1General data={formData} onChange={handleFormChange} errors={errors} />
+              <Step1General data={formData} onChange={handleFormChange} errors={errors} setErrors={setErrors} flows={flows} />
             )}
             {currentStep === 1 && (
               <Step2Endpoints data={formData} onChange={handleFormChange} errors={errors} />
