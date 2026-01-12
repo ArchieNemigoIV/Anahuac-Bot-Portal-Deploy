@@ -8,11 +8,16 @@ export const httpClient = async <T>(
   endpoint: string,
   options: HttpClientOptions = {}
 ): Promise<T> => {
-  const { skipAuth, headers, ...rest } = options;
+  const { skipAuth, headers, body, ...rest } = options;
 
   const finalHeaders = new Headers(headers);
 
-  finalHeaders.set("Content-Type", "application/json");
+  // 🔥 SOLO setear Content-Type si NO es FormData
+  const isFormData = body instanceof FormData;
+
+  if (!isFormData) {
+    finalHeaders.set("Content-Type", "application/json");
+  }
 
   if (!skipAuth) {
     const token = localStorage.getItem("token");
@@ -21,17 +26,32 @@ export const httpClient = async <T>(
     }
   }
 
-  console.log("➡️ Request:", endpoint, rest);
+  console.log("➡️ Request:", endpoint, {
+    ...rest,
+    body: isFormData ? "[FormData]" : body,
+  });
 
   const response = await fetch(`${URL_API_AGENT}${endpoint}`, {
     ...rest,
+    body,
     headers: finalHeaders,
   });
 
   if (!response.ok) {
-    const errorBody = await response.json();
+    let errorBody: any = null;
+
+    try {
+      errorBody = await response.json();
+    } catch {
+      /* no-op */
+    }
+
     console.error("❌ Response error:", errorBody);
-    throw new Error(errorBody?.meta?.message || "Error de red");
+    throw new Error(
+      errorBody?.meta?.message ||
+      errorBody?.message ||
+      "Error de red"
+    );
   }
 
   const data = (await response.json()) as T;

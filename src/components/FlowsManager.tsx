@@ -22,7 +22,7 @@ import {
   HelpCircle,
   BookOpen,
 } from "lucide-react";
-import { transformGetFlowsResponseToFullFlow } from "../utils/helpers";
+import { removeChatConvertationStorage, transformGetFlowsResponseToFullFlow } from "../utils/helpers";
 import { createFlowData, deleteFlowData, getFlows, patchFlowData, updateFlowData } from "../api/flows";
 import { useSpinnerStore } from "../store/useSpinner";
 
@@ -199,7 +199,7 @@ function useFlowsStorage() {
         } else {
           await createFlowData(openApiSchema);
         }
-
+        removeChatConvertationStorage();
         await loadFlows();
       } catch (error) {
         console.error("Error guardando flow en backend:", error);
@@ -239,6 +239,7 @@ function useFlowsStorage() {
         storedFlowRowKey: flow.id,
         active: nextActive,
       });
+      removeChatConvertationStorage();
     } catch (error) {
       console.error("Error updating flow status", error);
 
@@ -259,6 +260,7 @@ function useFlowsStorage() {
       try {
         openSpinner()
         await deleteFlowData(flow.name, flow.id);
+        removeChatConvertationStorage();
         loadFlows()
         closeSpinner()
       } catch (error) {

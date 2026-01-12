@@ -114,10 +114,6 @@ export function transformGetFlowsResponseToFullFlow(
   });
 }
 
-/* ======================================================
-   AUTH DETECTION
-====================================================== */
-
 function detectAuth(components?: BackendFlowComponents): FlowAuth {
   if (!components?.securitySchemes) {
     return { type: "none" };
@@ -142,3 +138,23 @@ function detectAuth(components?: BackendFlowComponents): FlowAuth {
 
   return { type: "none" };
 }
+
+export function removeChatConvertationStorage(){
+  localStorage.removeItem("playground_chat_conversation_id")
+  localStorage.removeItem("playground_chat_messages")
+}
+
+export const formatDateTimeFriendly = (isoDate: string) => {
+  const date = new Date(isoDate);
+
+  return date.toLocaleDateString("es-MX", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }) + " · " +
+  date.toLocaleTimeString("es-MX", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+

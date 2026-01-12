@@ -47,11 +47,12 @@ export default function SideNav() {
   const result = await Swal.fire({
     title: "¿Estás seguro?",
     text: "Esta acción subira los cambios al agente de producción",
-    icon: "info",
+    icon: "warning",
     showCancelButton: true,
+    confirmButtonColor: "#f97316",
+    cancelButtonColor: "#6b7280",
     confirmButtonText: "Sí, confirmar",
     cancelButtonText: "Cancelar",
-    reverseButtons: true,
   });
   if (result.isConfirmed) {
     onUploadChangeDeployAgent();
@@ -116,20 +117,6 @@ export default function SideNav() {
             <Workflow className="w-4 h-4" />
             Flujos
           </button>
-
-          {/* Base de conocimientos */}
-          <button
-            onClick={() => navigate("/knowledge-base")}
-            className={`flex items-center gap-3 px-6 py-3 text-sm font-medium rounded-lg transition-all 
-              ${isActive("/knowledge-base")
-                ? "bg-orange-50 text-orange-600 dark:bg-gray-800 dark:text-orange-400"
-                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"
-              }`}
-          >
-            <Brain className="w-4 h-4" />
-            Base de conocimientos
-          </button>
-
           {/* Playground */}
           <button
             onClick={() => navigate("/playground")}

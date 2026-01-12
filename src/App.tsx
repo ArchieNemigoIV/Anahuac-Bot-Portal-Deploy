@@ -7,7 +7,6 @@ import FlowsPage from "./app/pages/FlowsPage";
 import CreateFlowPage from "./app/pages/CreateFlowPage";
 import PlaygroundPage from "./app/pages/PlaygroundPage";
 import EditFlowPage from "./app/pages/EditFlowPage";
-import KnowledgeBasePage from "./app/pages/KnowledgeBasePage";
 import { useSpinnerStore } from "./store/useSpinner";
 import Spinner from "./components/ui/Spinner";
 
@@ -42,7 +41,6 @@ function App() {
         <Route path="/" element={<Navigate to="/login" />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/flows" element={<FlowsPage />} />
-          <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
           <Route path="/create-flow" element={<CreateFlowPage />} />
           <Route path="/edit-flow/:id" element={<EditFlowPage />} />
           <Route path="/playground" element={<PlaygroundPage />} />

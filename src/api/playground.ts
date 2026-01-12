@@ -1,4 +1,5 @@
 import { httpClient } from "../utils/httpClient";
+import type { ApiResponse } from "../utils/intefacesGenerics";
 
 /* =========================
  * Request
@@ -10,20 +11,7 @@ export interface PlaygroundChatRequest {
 /* =========================
  * Base API types
  * ========================= */
-export interface ApiCode {
-  http: number;
-  message: string;
-}
 
-export interface ApiMeta {
-  timestamp: string;
-}
-
-export interface ApiResponse<T> {
-  code: ApiCode;
-  data: T;
-  meta: ApiMeta;
-}
 
 /* =========================
  * Response
