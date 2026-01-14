@@ -40,6 +40,10 @@ jobs:
               # 🔐 Build-time environment variables
               env:
                   VITE_API_AGENT_IA: ${{ secrets.VITE_API_AGENT_IA }}
+                  VITE_AZURE_CLIENT_ID: ${{ secrets.VITE_AZURE_CLIENT_ID }}
+                  VITE_AZURE_TENANT_ID: ${{ secrets.VITE_AZURE_TENANT_ID }}
+
+
 
     close_pull_request_job:
         if: github.event_name == 'pull_request' && github.event.action == 'closed'
