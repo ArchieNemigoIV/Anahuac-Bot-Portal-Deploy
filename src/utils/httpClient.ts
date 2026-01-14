@@ -12,7 +12,6 @@ export const httpClient = async <T>(
 
   const finalHeaders = new Headers(headers);
 
-  // 🔥 SOLO setear Content-Type si NO es FormData
   const isFormData = body instanceof FormData;
 
   if (!isFormData) {
@@ -20,7 +19,7 @@ export const httpClient = async <T>(
   }
 
   if (!skipAuth) {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("accessToken");
     if (token) {
       finalHeaders.set("Authorization", `Bearer ${token}`);
     }

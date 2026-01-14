@@ -18,6 +18,7 @@ function App() {
   const { instance } = useMsal();
 
   useEffect(() => {
+    console.log("variables de entorno", import.meta.env.VITE_AZURE_CLIENT_ID, " hhhhehhhd", import.meta.env.VITE_AZURE_TENANT_ID)
     const accounts = instance.getAllAccounts();
 
     if (accounts.length > 0 && !instance.getActiveAccount()) {
