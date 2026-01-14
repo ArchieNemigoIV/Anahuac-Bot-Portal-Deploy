@@ -9,7 +9,7 @@ import { msalInstance } from "./utils/authConfig.ts";
 
 const queryClient = new QueryClient();
 await msalInstance.initialize();
-await msalInstance.handleRedirectPromise();
+//await msalInstance.handleRedirectPromise();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
