@@ -3,7 +3,6 @@ import {
   Bot,
   Home,
   Workflow,
-  Brain,
   TerminalSquare,
   LogOut,
   Rocket,
@@ -11,12 +10,15 @@ import {
 import { deployChangeAgent } from "../../api/deploy";
 import { useSpinnerStore } from "../../store/useSpinner";
 import Swal from "sweetalert2";
+import { useMsal } from "@azure/msal-react";
+import { clearMsalStorage } from "../../utils/helpers";
 
 export default function SideNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const openSpinner = useSpinnerStore((s) => s.openSpinner);
   const closeSpinner = useSpinnerStore((s) => s.closeSpinner);
+  const { instance } = useMsal();
 
   const onUploadChangeDeployAgent = async () => {
     try {
@@ -44,26 +46,43 @@ export default function SideNav() {
   };
 
   const confirmUpload = async () => {
+    const result = await Swal.fire({
+      title: "¿Estás seguro?",
+      text: "Esta acción subira los cambios al agente de producción",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#f97316",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Sí, confirmar",
+      cancelButtonText: "Cancelar",
+    });
+    if (result.isConfirmed) {
+      onUploadChangeDeployAgent();
+    }
+  };
+
+const handleLogout = async () => {
   const result = await Swal.fire({
-    title: "¿Estás seguro?",
-    text: "Esta acción subira los cambios al agente de producción",
+    title: "¿Cerrar sesión?",
     icon: "warning",
     showCancelButton: true,
     confirmButtonColor: "#f97316",
     cancelButtonColor: "#6b7280",
-    confirmButtonText: "Sí, confirmar",
+    confirmButtonText: "Sí, salir",
     cancelButtonText: "Cancelar",
   });
-  if (result.isConfirmed) {
-    onUploadChangeDeployAgent();
-  } 
-};
 
-  const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("username");
-    navigate("/login");
-  };
+  if (!result.isConfirmed) return;
+
+  instance.setActiveAccount(null);
+
+  clearMsalStorage();
+
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("user");
+
+  navigate("/login", { replace: true });
+};
 
   const isActive = (path: string) =>
     location.pathname === path ||
@@ -146,10 +165,6 @@ export default function SideNav() {
           />
         </button>
       </div>
-
-
-
-      {/* 🔸 Logout */}
       <div className="mb-6 px-6">
         <button
           onClick={handleLogout}

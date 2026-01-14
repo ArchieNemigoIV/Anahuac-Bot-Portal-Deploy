@@ -158,3 +158,11 @@ export const formatDateTimeFriendly = (isoDate: string) => {
   });
 };
 
+export function clearMsalStorage() {
+  Object.keys(localStorage).forEach((key) => {
+    if (key.startsWith("msal.")) {
+      localStorage.removeItem(key);
+    }
+  });
+}
+

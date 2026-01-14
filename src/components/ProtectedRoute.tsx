@@ -1,10 +1,16 @@
-import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet } from "react-router-dom";
+import { useIsAuthenticated, useMsal } from "@azure/msal-react";
+import { InteractionStatus } from "@azure/msal-browser";
 
-const ProtectedRoute: React.FC = () => {
-  const isLoggedIn = localStorage.getItem('isLoggedIn');
+const ProtectedRoute = () => {
+  const isAuthenticated = useIsAuthenticated();
+  const { inProgress } = useMsal();
 
-  return isLoggedIn ? <Outlet /> : <Navigate to="/login" />;
+  if (inProgress !== InteractionStatus.None) {
+    return null;
+  }
+
+  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
 export default ProtectedRoute;

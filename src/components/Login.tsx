@@ -13,10 +13,8 @@ const Login = () => {
         scopes: ["openid", "profile", "email"],
       });
 
-      // 🔐 Token real de Azure
       localStorage.setItem("accessToken", response.accessToken);
 
-      // 🧠 Info básica del usuario
       localStorage.setItem(
         "user",
         JSON.stringify({
