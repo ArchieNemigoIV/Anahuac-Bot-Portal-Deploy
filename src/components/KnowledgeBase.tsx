@@ -8,6 +8,7 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
+  Rocket,
 } from "lucide-react";
 import Button from "./ui/Button";
 import Swal from "sweetalert2";
@@ -38,6 +39,12 @@ export const STATUS_CONFIG: Record<
     color: "text-red-500",
     title:
       "El archivo fue cargado, sin embargo no pudo ser leído y no está siendo considerado en la base de conocimientos. Remuévalo e intente con otro archivo.",
+  },
+  DEPLOYED: {
+    Icon: Rocket,
+    color: "text-blue-500",
+    title:
+      "El archivo fue desplegado y está activo en el sistema.",
   },
 };
 

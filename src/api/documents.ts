@@ -2,7 +2,7 @@ export type GetIndexFilesResponse = ApiResponse<IndexFilesData>;
 import { httpClient } from "../utils/httpClient";
 import type { ApiResponse } from "../utils/intefacesGenerics";
 
-export type StatusType = "FAILED" | "INDEXED";
+export type StatusType = "FAILED" | "INDEXED" | "DEPLOYED";
 
 export interface IndexFile {
   id: string;
